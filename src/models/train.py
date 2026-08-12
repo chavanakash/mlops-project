@@ -97,7 +97,10 @@ def main() -> None:
                 "mae": mae,
                 "r2": r2,
             }
-            print(f"[{model_name}] rmse={rmse:.4f} mae={mae:.4f} r2={r2:.4f} (run_id={run.info.run_id})")
+            print(
+                f"[{model_name}] rmse={rmse:.4f} mae={mae:.4f} r2={r2:.4f} "
+                f"(run_id={run.info.run_id})"
+            )
 
     with open(METRICS_PATH, "w") as f:
         json.dump(all_metrics, f, indent=2)

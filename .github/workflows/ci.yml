@@ -1,0 +1,68 @@
+name: CI
+
+# Every push/PR runs lint+tests fast, with zero external infra (Postgres,
+# MLflow) - that's deliberate: CI should catch broken code in seconds, not
+# depend on services being reachable. Docker images only get built (and
+# only pushed on main) after lint+tests pass, so a broken commit never
+# produces a published image.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Unit tests (pytest)
+        run: pytest -v
+
+  docker-build:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push serving image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.serve
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mlops-project-app:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/mlops-project-app:latest
+
+      - name: Build and push mlflow image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.mlflow
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mlops-project-mlflow:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/mlops-project-mlflow:latest
