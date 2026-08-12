@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: mlops
+data:
+  # 'mlflow' here is the k8s Service name below - cluster-internal DNS,
+  # resolves only inside the mlops namespace.
+  MLFLOW_TRACKING_URI: http://mlflow:5001

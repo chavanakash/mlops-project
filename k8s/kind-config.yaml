@@ -1,0 +1,18 @@
+# kind doesn't expose NodePorts to your host by default - each port a pod
+# needs to be reachable on from outside the cluster has to be declared here
+# at cluster-creation time. Using host ports distinct from both the
+# docker-compose stack (8000/5001) and other local services (8080 is
+# already taken by an existing Jenkins container) so everything can run
+# side by side while you compare them.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: mlops-local
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 8081
+        protocol: TCP
+      - containerPort: 30051
+        hostPort: 5011
+        protocol: TCP

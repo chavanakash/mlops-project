@@ -1,0 +1,81 @@
+# MLFLOW_BACKEND_STORE_URI (contains the DB password) is intentionally NOT
+# in this file - it's injected from a Secret created imperatively via
+# `kubectl create secret generic mlflow-secret ...` so credentials never
+# get committed to git, even in a demo project.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+  namespace: mlops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      containers:
+        - name: mlflow
+          image: docker-mlflow:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5001
+          envFrom:
+            - configMapRef:
+                name: mlflow-config
+            - secretRef:
+                name: mlflow-secret
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { cpu: 1000m, memory: 1Gi }
+          volumeMounts:
+            - name: artifacts
+              mountPath: /mlartifacts
+          readinessProbe:
+            httpGet: { path: /, port: 5001 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet: { path: /, port: 5001 }
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+      volumes:
+        # emptyDir: artifacts live only as long as this pod does. Fine for
+        # local learning; a real deployment would use a PersistentVolume
+        # (or, more commonly for MLflow, S3/GCS as the artifact store) so
+        # a pod restart doesn't lose registered model files.
+        - name: artifacts
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow
+  namespace: mlops
+spec:
+  selector:
+    app: mlflow
+  ports:
+    - port: 5001
+      targetPort: 5001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow-nodeport
+  namespace: mlops
+spec:
+  type: NodePort
+  selector:
+    app: mlflow
+  ports:
+    - port: 5001
+      targetPort: 5001
+      nodePort: 30051

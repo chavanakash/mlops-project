@@ -71,14 +71,14 @@ stages:
     outs:
     - path: reports/train_metrics.json
       hash: md5
-      md5: 6f34e32d533fafbdf7cd04e98c1361c1
+      md5: 682dc54d8b4e89dcb84a5bda676fff40
       size: 516
   select_best:
     cmd: python -m src.models.select_best_model
     deps:
     - path: reports/train_metrics.json
       hash: md5
-      md5: 6f34e32d533fafbdf7cd04e98c1361c1
+      md5: 682dc54d8b4e89dcb84a5bda676fff40
       size: 516
     - path: src/models/select_best_model.py
       hash: md5
@@ -90,5 +90,5 @@ stages:
     outs:
     - path: reports/best_model.json
       hash: md5
-      md5: 1366e7e28767f49f70b996a8df9bc41c
+      md5: a2453c8ec13ad7f783fabec2e9c7848a
       size: 259
