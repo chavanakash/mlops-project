@@ -1,0 +1,13 @@
+# Minimal dependency set for the serving container - deliberately excludes
+# dvc/pathspec (pipeline tooling that has no business in a production
+# inference image; smaller image = faster deploys, smaller attack surface).
+pandas==2.2.3
+numpy==1.26.4
+scikit-learn==1.5.2
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10
+mlflow==2.17.2
+python-dotenv==1.0.1
+pyyaml==6.0.2
+fastapi==0.115.5
+uvicorn[standard]==0.32.1

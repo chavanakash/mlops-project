@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+RUN pip install --no-cache-dir mlflow==2.17.2 psycopg2-binary==2.9.10
+
+EXPOSE 5001
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5001')" || exit 1
+
+# backend-store-uri (experiment/run/registry metadata) and
+# artifacts-destination (model files) are injected via env at runtime -
+# see docker-compose.yml - so the same image works locally and later in
+# any other environment without rebuilding.
+#
+# --serve-artifacts + --artifacts-destination (rather than
+# --default-artifact-root) makes the server proxy artifact uploads/downloads
+# over its HTTP API. Without this, clients write artifacts directly to the
+# filesystem path themselves - which breaks the moment the client (e.g. a
+# training script on your host machine) isn't the same machine as the
+# server's mounted volume.
+CMD mlflow server \
+    --host 0.0.0.0 \
+    --port 5001 \
+    --backend-store-uri "$MLFLOW_BACKEND_STORE_URI" \
+    --serve-artifacts \
+    --artifacts-destination "$MLFLOW_ARTIFACT_ROOT"

@@ -27,5 +27,41 @@ services:
     depends_on:
       - warehouse
 
+  mlflow:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mlflow
+    container_name: mlops_mlflow
+    restart: unless-stopped
+    environment:
+      # separate database from the application's houses/predictions tables
+      MLFLOW_BACKEND_STORE_URI: postgresql://${POSTGRES_USER:-mlops}:${POSTGRES_PASSWORD:-mlops}@warehouse:5432/mlflow
+      MLFLOW_ARTIFACT_ROOT: /mlartifacts
+    ports:
+      - "5001:5001"
+    volumes:
+      - mlflow_artifacts:/mlartifacts
+    depends_on:
+      warehouse:
+        condition: service_healthy
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.serve
+    container_name: mlops_app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-mlops}:${POSTGRES_PASSWORD:-mlops}@warehouse:5432/${POSTGRES_DB:-house_prices}
+      MLFLOW_TRACKING_URI: http://mlflow:5001
+    ports:
+      - "8000:8000"
+    depends_on:
+      warehouse:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+
 volumes:
   warehouse_data:
+  mlflow_artifacts:
