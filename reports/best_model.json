@@ -1,8 +1,8 @@
 {
   "registered_model_name": "house-price-model",
-  "version": "2",
+  "version": "1",
   "algorithm": "random_forest",
-  "run_id": "a6c0d3072790495ebd4a94f38c084b44",
+  "run_id": "8e25b953b0454b3abefd9272d9a4aa7d",
   "rmse": 0.5225393316317153,
   "mae": 0.34611687011143244,
   "r2": 0.7916319579337284,

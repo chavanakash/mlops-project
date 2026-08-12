@@ -1,0 +1,29 @@
+# Every target here is something the "DevOps" half of MLOps actually
+# watches in production: the host/containers (is anything starved for
+# CPU/memory), the database (is it up, how many connections), and the
+# application itself (request rate, latency, error rate). Prometheus pulls
+# (scrapes) metrics from each target on a fixed interval rather than the
+# targets pushing - that's the standard Prometheus model.
+global:
+  scrape_interval: 10s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  - job_name: house-price-app
+    static_configs:
+      - targets: ["app:8000"]
+
+  - job_name: drift-monitor
+    static_configs:
+      - targets: ["monitor:8001"]

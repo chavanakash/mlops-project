@@ -62,6 +62,81 @@ services:
       mlflow:
         condition: service_healthy
 
+  monitor:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.monitor
+    container_name: mlops_monitor
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-mlops}:${POSTGRES_PASSWORD:-mlops}@warehouse:5432/${POSTGRES_DB:-house_prices}
+    ports:
+      - "8001:8001"
+    depends_on:
+      warehouse:
+        condition: service_healthy
+
+  # --- monitoring: system + database + application metrics ---
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: mlops_cadvisor
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "8086:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: mlops_postgres_exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-mlops}:${POSTGRES_PASSWORD:-mlops}@warehouse:5432/${POSTGRES_DB:-house_prices}?sslmode=disable
+    ports:
+      - "9187:9187"
+    depends_on:
+      warehouse:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: mlops_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - cadvisor
+      - postgres-exporter
+      - app
+      - monitor
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: mlops_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   warehouse_data:
   mlflow_artifacts:
+  prometheus_data:
+  grafana_data:

@@ -22,10 +22,23 @@ import pandas as pd
 import yaml
 from fastapi import FastAPI, HTTPException
 from mlflow.tracking import MlflowClient
+from prometheus_client import Histogram
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 
 from src.config import DATABASE_URL, MLFLOW_TRACKING_URI
+
+# Beyond the generic request-rate/latency metrics Instrumentator adds below,
+# this tracks the model's own output distribution over time - a sudden
+# shift here (predictions clustering at a different price range than
+# usual) is often the first hint of data drift, visible in Grafana well
+# before anyone backfills actual_value to compute real error.
+PREDICTED_VALUE = Histogram(
+    "house_price_predicted_value",
+    "Distribution of predicted house values ($100k units)",
+    buckets=(0.5, 1, 1.5, 2, 3, 4, 5, 7, 10),
+)
 
 with open("params.yaml") as f:
     PARAMS = yaml.safe_load(f)
@@ -52,6 +65,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="House Price Prediction API", lifespan=lifespan)
+
+# Exposes GET /metrics (request count/latency/status by endpoint) for
+# Prometheus to scrape - see docker/prometheus.yml's house-price-app job.
+Instrumentator().instrument(app).expose(app)
 
 
 class HouseFeatures(BaseModel):
@@ -90,6 +107,7 @@ def predict(features: HouseFeatures):
     X = pd.DataFrame([row])
 
     prediction = float(model_state["model"].predict(X)[0])
+    PREDICTED_VALUE.observe(prediction)
 
     with engine.begin() as conn:
         conn.execute(

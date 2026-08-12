@@ -1,0 +1,70 @@
+{
+  "title": "MLOps Overview",
+  "uid": "mlops-overview",
+  "timezone": "browser",
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "id": 1, "title": "App request rate (by endpoint)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(rate(http_requests_total[1m])) by (handler)", "legendFormat": "{{handler}}" }]
+    },
+    {
+      "id": 2, "title": "App p95 latency (by endpoint)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, handler))", "legendFormat": "{{handler}}" }]
+    },
+    {
+      "id": 3, "title": "Predicted house value - average ($100k units)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{ "expr": "rate(house_price_predicted_value_sum[5m]) / rate(house_price_predicted_value_count[5m])", "legendFormat": "avg predicted value" }]
+    },
+    {
+      "id": 4, "title": "Predictions served vs. labeled (actual_value backfilled)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "predictions_total_count", "legendFormat": "predictions in window" },
+        { "expr": "model_performance_labeled_count", "legendFormat": "labeled (actual_value known)" }
+      ]
+    },
+    {
+      "id": 5, "title": "Live model error vs. historical (RMSE / MAE)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "model_performance_rmse", "legendFormat": "RMSE" },
+        { "expr": "model_performance_mae", "legendFormat": "MAE" }
+      ]
+    },
+    {
+      "id": 6, "title": "Feature drift: KS-test p-value (< 0.05 = drift)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [{ "expr": "feature_drift_ks_pvalue", "legendFormat": "{{feature}}" }],
+      "fieldConfig": { "defaults": { "custom": { "thresholdsStyle": { "mode": "line" } }, "thresholds": { "steps": [{ "value": 0, "color": "red" }, { "value": 0.05, "color": "green" }] } }, "overrides": [] }
+    },
+    {
+      "id": 7, "title": "Feature drift: PSI (>0.25 = significant shift)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [{ "expr": "feature_drift_psi", "legendFormat": "{{feature}}" }]
+    },
+    {
+      "id": 8, "title": "Postgres: up / active connections by database", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        { "expr": "pg_up", "legendFormat": "pg_up" },
+        { "expr": "pg_stat_database_numbackends{datname=~\"house_prices|mlflow|mlflow_k8s\"}", "legendFormat": "{{datname}} connections" }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Container CPU/memory (aggregate - cAdvisor can't resolve container names on Docker Desktop for Mac)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "targets": [
+        { "expr": "sum(rate(container_cpu_usage_seconds_total{id=~\"/docker/.+\"}[1m]))", "legendFormat": "total CPU cores used" },
+        { "expr": "sum(container_memory_usage_bytes{id=~\"/docker/.+\"}) / 1024 / 1024", "legendFormat": "total memory (MB)" }
+      ]
+    }
+  ]
+}

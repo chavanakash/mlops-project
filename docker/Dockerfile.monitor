@@ -1,0 +1,16 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements-monitor.txt .
+RUN pip install --no-cache-dir -r requirements-monitor.txt
+
+COPY src/config.py src/config.py
+COPY src/__init__.py src/__init__.py
+COPY src/monitoring/ src/monitoring/
+
+EXPOSE 8001
+HEALTHCHECK --interval=15s --timeout=5s --retries=5 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001')" || exit 1
+
+CMD ["python", "-m", "src.monitoring.metrics_exporter"]

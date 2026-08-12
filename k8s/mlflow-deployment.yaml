@@ -2,6 +2,15 @@
 # in this file - it's injected from a Secret created imperatively via
 # `kubectl create secret generic mlflow-secret ...` so credentials never
 # get committed to git, even in a demo project.
+#
+# That secret MUST point at its own database (e.g. mlflow_k8s), separate
+# from the docker-compose MLflow's database (mlflow). Registry metadata
+# (which run/version is "champion") lives in the backend store, but the
+# actual model artifact bytes live only on whichever server's own storage
+# wrote them. Two MLflow servers sharing one backend store will fight over
+# the champion alias while each only having half the picture - found this
+# out the hard way when the docker-compose app crashed because kind's
+# retrain had repointed champion at artifacts only kind's pod could see.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
