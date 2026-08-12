@@ -32,12 +32,12 @@ CURRENT_WINDOW_ROWS = 500
 
 KS_PVALUE = Gauge(
     "feature_drift_ks_pvalue",
-    "KS-test p-value comparing live prediction-request features to historical training data (low = drift)",
+    "KS-test p-value: live prediction-request features vs historical training data (low = drift)",
     ["feature"],
 )
 PSI = Gauge(
     "feature_drift_psi",
-    "Population Stability Index comparing live prediction-request features to historical training data",
+    "Population Stability Index: live prediction-request features vs historical training data",
     ["feature"],
 )
 PERF_RMSE = Gauge("model_performance_rmse", "RMSE over predictions with a backfilled actual_value")
@@ -45,7 +45,7 @@ PERF_MAE = Gauge("model_performance_mae", "MAE over predictions with a backfille
 LABELED_COUNT = Gauge(
     "model_performance_labeled_count", "Number of predictions with a backfilled actual_value"
 )
-PREDICTIONS_COUNT = Gauge("predictions_total_count", "Prediction requests considered in this refresh")
+PREDICTIONS_COUNT = Gauge("predictions_total_count", "Prediction requests considered this refresh")
 
 
 def load_reference(engine) -> pd.DataFrame:
