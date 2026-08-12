@@ -29,6 +29,12 @@ jobs:
         run: ruff check .
 
       - name: Unit tests (pytest)
+        # Dummy values: src/config.py reads these at import time, but the
+        # tests themselves never touch a real database/MLflow server (they
+        # stub the model and use an in-memory sqlite engine instead).
+        env:
+          DATABASE_URL: postgresql+psycopg2://ci:ci@localhost:5432/ci
+          MLFLOW_TRACKING_URI: http://localhost:5001
         run: pytest -v
 
   docker-build:
