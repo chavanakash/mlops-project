@@ -15,12 +15,14 @@ compare "what we predicted" against later.
 
 Run: uvicorn src.serving.app:app --host 0.0.0.0 --port 8000
 """
+import os
 from contextlib import asynccontextmanager
 
 import mlflow
 import pandas as pd
 import yaml
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from mlflow.tracking import MlflowClient
 from prometheus_client import Histogram
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -28,6 +30,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 
 from src.config import DATABASE_URL, MLFLOW_TRACKING_URI
+
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 # Beyond the generic request-rate/latency metrics Instrumentator adds below,
 # this tracks the model's own output distribution over time - a sudden
@@ -69,6 +73,12 @@ app = FastAPI(title="House Price Prediction API", lifespan=lifespan)
 # Exposes GET /metrics (request count/latency/status by endpoint) for
 # Prometheus to scrape - see docker/prometheus.yml's house-price-app job.
 Instrumentator().instrument(app).expose(app)
+
+
+@app.get("/", include_in_schema=False)
+def frontend():
+    """A plain HTML/JS form - easier to eyeball predictions than Swagger UI."""
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 class HouseFeatures(BaseModel):

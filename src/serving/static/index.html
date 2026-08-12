@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>House Price Predictor</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e2e5ea;
+    --text: #1b1f24;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --good: #16a34a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .wrap { width: 100%; max-width: 640px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: var(--accent);
+    margin-left: 8px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  input {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fafbfc;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    margin-top: 18px;
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: var(--accent-hover); }
+  button:disabled { background: #9ca3af; cursor: default; }
+  .result {
+    text-align: center;
+    padding: 20px;
+    display: none;
+  }
+  .result.show { display: block; }
+  .result .value {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--good);
+  }
+  .result .meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .error {
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+  }
+  .error.show { display: block; }
+  .field-help {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>House Price Predictor <span class="badge" id="model-badge">loading model…</span></h1>
+  <p class="subtitle">Predicts median house value (California housing data) using whichever model currently holds the MLflow "champion" alias.</p>
+
+  <div class="card">
+    <form id="predict-form">
+      <div class="grid">
+        <div>
+          <label for="med_inc">Median income ($10k units)</label>
+          <input type="number" step="any" id="med_inc" value="5.5" required />
+        </div>
+        <div>
+          <label for="house_age">House age (years)</label>
+          <input type="number" step="any" id="house_age" value="20" required />
+        </div>
+        <div>
+          <label for="ave_rooms">Average rooms per household</label>
+          <input type="number" step="any" id="ave_rooms" value="5.8" required />
+        </div>
+        <div>
+          <label for="ave_bedrms">Average bedrooms per household</label>
+          <input type="number" step="any" id="ave_bedrms" value="1.05" required />
+        </div>
+        <div>
+          <label for="population">Block population</label>
+          <input type="number" step="any" id="population" value="1200" required />
+        </div>
+        <div>
+          <label for="ave_occup">Average occupants per household</label>
+          <input type="number" step="any" id="ave_occup" value="2.9" required />
+        </div>
+        <div>
+          <label for="latitude">Latitude</label>
+          <input type="number" step="any" id="latitude" value="34.1" required />
+        </div>
+        <div>
+          <label for="longitude">Longitude</label>
+          <input type="number" step="any" id="longitude" value="-118.3" required />
+        </div>
+      </div>
+      <button type="submit" id="submit-btn">Predict price</button>
+      <p class="field-help">Coordinates: try ~34.1, -118.3 (Los Angeles) or ~37.7, -122.4 (San Francisco).</p>
+    </form>
+  </div>
+
+  <div class="card error" id="error-box"></div>
+
+  <div class="card result" id="result-box">
+    <div class="value" id="result-value">–</div>
+    <div class="meta" id="result-meta"></div>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById("predict-form");
+  const btn = document.getElementById("submit-btn");
+  const resultBox = document.getElementById("result-box");
+  const resultValue = document.getElementById("result-value");
+  const resultMeta = document.getElementById("result-meta");
+  const errorBox = document.getElementById("error-box");
+  const modelBadge = document.getElementById("model-badge");
+
+  async function loadHealth() {
+    try {
+      const res = await fetch("/health");
+      const data = await res.json();
+      modelBadge.textContent = `${data.model_name} v${data.model_version}`;
+    } catch (e) {
+      modelBadge.textContent = "model status unknown";
+    }
+  }
+
+  function fmtUSD(hundredThousands) {
+    const dollars = hundredThousands * 100000;
+    return dollars.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.classList.remove("show");
+    resultBox.classList.remove("show");
+    btn.disabled = true;
+    btn.textContent = "Predicting…";
+
+    const payload = {
+      med_inc: parseFloat(document.getElementById("med_inc").value),
+      house_age: parseFloat(document.getElementById("house_age").value),
+      ave_rooms: parseFloat(document.getElementById("ave_rooms").value),
+      ave_bedrms: parseFloat(document.getElementById("ave_bedrms").value),
+      population: parseFloat(document.getElementById("population").value),
+      ave_occup: parseFloat(document.getElementById("ave_occup").value),
+      latitude: parseFloat(document.getElementById("latitude").value),
+      longitude: parseFloat(document.getElementById("longitude").value),
+    };
+
+    try {
+      const res = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail ? JSON.stringify(body.detail) : `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      resultValue.textContent = fmtUSD(data.predicted_value);
+      resultMeta.textContent = `Served by ${data.model_name} v${data.model_version}`;
+      resultBox.classList.add("show");
+      modelBadge.textContent = `${data.model_name} v${data.model_version}`;
+    } catch (err) {
+      errorBox.textContent = "Prediction failed: " + err.message;
+      errorBox.classList.add("show");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Predict price";
+    }
+  });
+
+  loadHealth();
+</script>
+</body>
+</html>
