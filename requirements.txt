@@ -1,0 +1,19 @@
+# --- core data + ML (data scientist / MLOps engineer steps) ---
+pandas==2.2.3
+numpy==1.26.4
+scikit-learn==1.5.2
+
+# --- data warehouse connectivity ---
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10
+
+# --- experiment tracking + model registry ---
+mlflow==2.17.2
+
+# --- pipeline versioning (data + model DAG) ---
+dvc==3.59.1
+pathspec==0.12.1  # dvc 3.59 is incompatible with pathspec>=1.0 (missing _DIR_MARK)
+
+# --- config / env ---
+python-dotenv==1.0.1
+pyyaml==6.0.2

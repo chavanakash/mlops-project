@@ -1,0 +1,45 @@
+stages:
+  extract:
+    cmd: python -m src.data.extract_from_warehouse
+    deps:
+      - src/data/extract_from_warehouse.py
+    params:
+      - extract.as_of
+    outs:
+      - data/raw/houses.csv
+
+  featurize:
+    cmd: python -m src.features.build_features
+    deps:
+      - src/features/build_features.py
+      - data/raw/houses.csv
+    params:
+      - split.test_size
+      - split.random_state
+    outs:
+      - data/processed/train.csv
+      - data/processed/test.csv
+
+  train:
+    cmd: python -m src.models.train
+    deps:
+      - src/models/train.py
+      - data/processed/train.csv
+      - data/processed/test.csv
+    params:
+      - models
+      - mlflow.experiment_name
+    metrics:
+      - reports/train_metrics.json:
+          cache: false
+
+  select_best:
+    cmd: python -m src.models.select_best_model
+    deps:
+      - src/models/select_best_model.py
+      - reports/train_metrics.json
+    params:
+      - mlflow.registered_model_name
+    metrics:
+      - reports/best_model.json:
+          cache: false

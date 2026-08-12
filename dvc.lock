@@ -1,0 +1,94 @@
+schema: '2.0'
+stages:
+  extract:
+    cmd: python -m src.data.extract_from_warehouse
+    deps:
+    - path: src/data/extract_from_warehouse.py
+      hash: md5
+      md5: 6f17dd31986f8c5d63d7a96b73848c49
+      size: 1481
+    params:
+      params.yaml:
+        extract.as_of:
+    outs:
+    - path: data/raw/houses.csv
+      hash: md5
+      md5: 9b801f5553dc97e58b3cf91331ce9491
+      size: 2916077
+  featurize:
+    cmd: python -m src.features.build_features
+    deps:
+    - path: data/raw/houses.csv
+      hash: md5
+      md5: 9b801f5553dc97e58b3cf91331ce9491
+      size: 2916077
+    - path: src/features/build_features.py
+      hash: md5
+      md5: f25d4701949e45da816f7105ca473a9a
+      size: 1936
+    params:
+      params.yaml:
+        split.random_state: 42
+        split.test_size: 0.2
+    outs:
+    - path: data/processed/test.csv
+      hash: md5
+      md5: 465fd4821beee6517bf8661a71bdcf4a
+      size: 458582
+    - path: data/processed/train.csv
+      hash: md5
+      md5: f585aa8d0e9ee4dc5ece42d609e44ba1
+      size: 1836855
+  train:
+    cmd: python -m src.models.train
+    deps:
+    - path: data/processed/test.csv
+      hash: md5
+      md5: 465fd4821beee6517bf8661a71bdcf4a
+      size: 458582
+    - path: data/processed/train.csv
+      hash: md5
+      md5: f585aa8d0e9ee4dc5ece42d609e44ba1
+      size: 1836855
+    - path: src/models/train.py
+      hash: md5
+      md5: adae20d5ae2fba578a9693f04dcb7673
+      size: 3731
+    params:
+      params.yaml:
+        mlflow.experiment_name: house-price-prediction
+        models:
+          linear_regression: {}
+          random_forest:
+            n_estimators: 200
+            max_depth: 12
+            random_state: 42
+          gradient_boosting:
+            n_estimators: 300
+            learning_rate: 0.05
+            max_depth: 3
+            random_state: 42
+    outs:
+    - path: reports/train_metrics.json
+      hash: md5
+      md5: 905863cd12c5b12118ac0f28e769b324
+      size: 516
+  select_best:
+    cmd: python -m src.models.select_best_model
+    deps:
+    - path: reports/train_metrics.json
+      hash: md5
+      md5: 905863cd12c5b12118ac0f28e769b324
+      size: 516
+    - path: src/models/select_best_model.py
+      hash: md5
+      md5: e321aaf17a560fb3990929048476fd3e
+      size: 2556
+    params:
+      params.yaml:
+        mlflow.registered_model_name: house-price-model
+    outs:
+    - path: reports/best_model.json
+      hash: md5
+      md5: f5bc1b0cb5e857945ff874d026225ced
+      size: 259

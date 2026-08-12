@@ -1,0 +1,27 @@
+# Single source of truth for pipeline hyperparameters / config.
+# Why a params.yaml: DVC hashes this file per-stage. Change a number here,
+# and `dvc repro` knows exactly which downstream stages must re-run - you
+# never have to remember "did I retrain after changing max_depth?".
+
+extract:
+  as_of: null  # null = pull all rows; a date string later scopes retraining to "what's new"
+
+split:
+  test_size: 0.2
+  random_state: 42
+
+mlflow:
+  experiment_name: house-price-prediction
+  registered_model_name: house-price-model
+
+models:
+  linear_regression: {}
+  random_forest:
+    n_estimators: 200
+    max_depth: 12
+    random_state: 42
+  gradient_boosting:
+    n_estimators: 300
+    learning_rate: 0.05
+    max_depth: 3
+    random_state: 42
